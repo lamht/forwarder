@@ -16,7 +16,6 @@ RUN npm install --production
 
 
 COPY index.js ./
-COPY serviceAccount.json ./
 
 
 ENV NODE_ENV=production
