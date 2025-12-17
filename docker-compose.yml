@@ -1,0 +1,7 @@
+services:
+  tunnel:
+    build: .
+    environment:
+      URL_FORWARD: "http://host.docker.internal:3000"
+      FIREBASE_DB_URL: "https://xxx.firebaseio.com"
+    restart: unless-stopped
