@@ -82,6 +82,7 @@ function shutdown(proc) {
 
 // ===== Check log định kỳ =====
 async function checkLog() {
+  log("Checking log for public URL", { logFile });
   if (!fs.existsSync(logFile)) return;
 
   const content = fs.readFileSync(logFile, "utf-8");
@@ -111,7 +112,7 @@ async function checkLog() {
 }
 
 // run check mỗi 1 phút
-setInterval(checkLog, 60 * 1000);
+setInterval(checkLog, 30 * 1000);
 
 // run check ngay lần đầu
 checkLog();
