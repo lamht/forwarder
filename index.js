@@ -111,8 +111,14 @@ async function checkLog() {
   }
 }
 
-// run check mỗi 1 phút
-setInterval(checkLog, 30 * 1000);
+async function loopCheck() {
+  try {
+    await checkLog();
+  } catch (e) {
+    log("checkLog error", { error: e.message });
+  } finally {
+    setTimeout(loopCheck, 30 * 1000);
+  }
+}
 
-// run check ngay lần đầu
-checkLog();
+loopCheck(); // start
