@@ -24,6 +24,9 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+    - name: Set short sha
+      run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -31,4 +34,4 @@ jobs:
         push: ${{ github.event_name == 'push' }}
         tags: |
           thanhlam00290/forwarder:latest
-          thanhlam00290/forwarder:${{ github.sha }}
+          thanhlam00290/forwarder:${{ env.SHORT_SHA }}
