@@ -4,22 +4,22 @@ const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL;
 const URL_FORWARD = process.env.URL_FORWARD;
 const TABLE = process.env.TABLE || "cloudflare";
 
-if (!FIREBASE_DB_URL) {
-  console.error("[ENV] FIREBASE_DB_URL missing");
+if (!FIREBASE_DB_URL || !URL_FORWARD) {
+  console.error("[ENV] missing");
   process.exit(1);
 }
 
-if (!URL_FORWARD) {
-  console.error("[ENV] URL_FORWARD missing");
-  process.exit(1);
+function log(msg, data = {}) {
+  console.log(JSON.stringify({
+    service: "forwarder",
+    time: new Date().toISOString(),
+    msg,
+    ...data
+  }));
 }
 
-console.log("[OK] ENV loaded");
-
-// ===== save to firebase (no auth) =====
+// ===== save to firebase =====
 async function savePublicUrl(url) {
-  if (!url) return;
-
   try {
     const res = await fetch(
       `${FIREBASE_DB_URL}/${TABLE}.json`,
@@ -33,12 +33,49 @@ async function savePublicUrl(url) {
       }
     );
 
-    if (!res.ok) {
-      console.error("[FIREBASE] write failed:", res.status);
+    if (res.ok) {
+      log("Firebase updated", { url });
     } else {
-      console.log("[FIREBASE] URL saved");
+      log("Firebase write failed", { status: res.status });
     }
-  } catch (err) {
-    console.error("[FIREBASE] error:", err.message);
+  } catch (e) {
+    log("Firebase error", { error: e.message });
   }
 }
+
+// ===== run cloudflared quick tunnel =====
+function runTunnel() {
+  log("Starting cloudflared", { forward: URL_FORWARD });
+
+  const proc = spawn("cloudflared", [
+    "tunnel",
+    "--url",
+    URL_FORWARD
+  ]);
+
+  proc.stdout.on("data", async (data) => {
+    const text = data.toString();
+    process.stdout.write(text);
+    log("cloudflared output", { text });
+    // find https://xxxxx.trycloudflare.com
+    const match = text.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+    if (match) {
+      const publicUrl = match[0];
+      log("Public URL detected", { publicUrl });
+      await savePublicUrl(publicUrl);
+    }
+  });
+
+  proc.stderr.on("data", (data) => {
+    process.stderr.write(data.toString());
+  });
+
+  proc.on("exit", (code) => {
+    log("cloudflared exited", { code });
+    // auto restart after 5s
+    setTimeout(runTunnel, 5000);
+  });
+}
+
+// ===== keep process alive =====
+runTunnel();
