@@ -85,10 +85,24 @@ async function checkLog() {
   if (!fs.existsSync(logFile)) return;
 
   const content = fs.readFileSync(logFile, "utf-8");
-  const match = content.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
 
-  if (match) {
-    const publicUrl = match[0];
+  // split theo dòng
+  const lines = content.split("\n");
+
+  let publicUrl = null;
+  const urlRegex = /https:\/\/\S+\.trycloudflare\.com/;
+
+  for (const line of lines) {
+    // remove | và trim khoảng trắng
+    const cleanLine = line.replace(/\|/g, "").trim();
+    const match = cleanLine.match(urlRegex);
+    if (match) {
+      publicUrl = match[0];
+      break; // lấy URL đầu tiên tìm thấy
+    }
+  }
+
+  if (publicUrl) {
     log("Public URL found in log", { publicUrl });
     await savePublicUrl(publicUrl);
   } else {
